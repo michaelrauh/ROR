@@ -53,10 +53,8 @@
       (pit (slither snake) (age-goo goos))))
 
 (define (can-eat snake goos)
-  (cond [(empty? goos) #f]
-        [else (if (close? (snake-head snake) (first goos))
-                  (first goos)
-                  (can-eat snake (rest goos)))]))
+  (define head (snake-head snake))
+  (ormap (lambda (g) (and (close? head g) g)) goos))
 
 (define (close? s g)
   (posn=? s (goo-loc g)))
@@ -74,7 +72,7 @@
 
 (define (all-but-last segs)
   (cond [(empty? (rest segs)) empty]
-        [else (cons (first segs) (all-but-last (rest segs)))]))
+        [else (drop-right segs 1)]))
 
 (define (next-head sn)
   (define head (snake-head sn))
@@ -91,19 +89,17 @@
 (define (age-goo goos)
   (rot (renew goos)))
 
-(define (decay g)
-  (goo (goo-loc g) (sub1 (goo-expire g))))
-
 (define (rot goos)
-  (cond [(empty? goos) empty]
-        [else (cons (decay (first goos)) (rot (rest goos)))]))
+  (define (decay g)
+    (goo (goo-loc g) (sub1 (goo-expire g))))
+  (map decay goos))
 
 (define (renew goos)
-  (cond [(empty? goos) empty]
-        [(rotten? (first goos))
-         (cons (fresh-goo) (renew (rest goos)))]
-        [else
-         (cons (first goos) (renew (rest goos)))]))
+  (define (go g)
+    (if (rotten? g)
+        (fresh-goo)
+        g))
+  (map go goos))
 
 (define (rotten? g)
   (zero? (goo-expire g)))
@@ -153,11 +149,7 @@
             snake-body-scene))
 
 (define (img-list+scene posns img scene)
-  (cond [(empty? posns) scene]
-        [else (img+scene
-               (first posns)
-               img
-               (img-list+scene (rest posns) img scene))]))
+  (foldr (lambda (p s) (img+scene p img s)) scene posns))
 
 (define (img+scene posn img scene)
   (place-image img
@@ -167,9 +159,7 @@
 
 (define (goo-list+scene goos scene)
   (define (get-posns-from-goo goos)
-    (cond [(empty? goos) empty]
-          [else (cons (goo-loc (first goos))
-                      (get-posns-from-goo (rest goos)))]))
+    (map goo-loc goos))
   (img-list+scene (get-posns-from-goo goos) GOO-IMG scene))
 
 (define (dead? w)
